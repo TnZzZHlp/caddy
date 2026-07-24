@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/caddyserver/caddy/v2 v2.11.4
 	github.com/caddyserver/replace-response v0.0.0-20250618171559-80962887e4c6
+	github.com/mholt/caddy-webdav v0.0.0-20260127042217-fa2f366b0d75
 )
 
 require (
