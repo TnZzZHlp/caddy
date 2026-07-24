@@ -15,6 +15,10 @@ cp /etc/caddy/service/caddy-sync-watch.service /etc/systemd/system/
 systemctl daemon-reload
 
 echo "=== 校验 ==="
+if ! /etc/caddy/bin/caddy list-modules | grep -qx 'http.handlers.dynamic_proxy'; then
+	echo "错误：/etc/caddy/bin/caddy 缺少 dynamic_proxy 模块，拒绝启动。"
+	exit 1
+fi
 /etc/caddy/bin/caddy validate --config /etc/caddy/Caddyfile
 
 echo "=== 启动 ==="

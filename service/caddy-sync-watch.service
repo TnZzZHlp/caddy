@@ -1,7 +1,7 @@
 [Unit]
-Description=Watch /etc/caddy changes via Syncthing and reload Caddy
+Description=Watch /etc/caddy changes via Syncthing and reload or restart Caddy
 After=network.target caddy.service
-BindsTo=caddy.service
+PartOf=caddy.service
 
 [Service]
 Type=simple

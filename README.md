@@ -1,74 +1,65 @@
-# Nginx → Caddy 配置转换说明
+# Caddy 自定义构建与 dynamic_proxy 模块
 
 ## 源信息
 - **服务器**: 192.168.255.201:999 (root)
 - **源配置**: /etc/nginx
 - **拉取时间**: 2026-05-21
 
-## 目录结构
-```
-caddy-config/
-├── Caddyfile                     # 主配置（全局选项 + 代码片段 + import）
-├── caddy                         # Caddy v2.11.3 二进制（含 replace_response 模块）
-├── README.md                     # 本说明文件
-├── sites/                        # 按域名拆分的站点配置
-│   ├── tnzzz-top.caddy           # 主站（静态）
-│   ├── api-tnzzz-top.caddy       # API 网关 + 订阅文件
-│   ├── api-800008-best.caddy     # API 网关
-│   ├── ai-tnzzz-top.caddy        # AI 流式代理
-│   ├── mcp-tnzzz-top.caddy       # MCP 代理
-│   ├── todos-tnzzz-top.caddy     # SPA + API
-│   ├── grafana-tnzzz-top.caddy   # Grafana 面板
-│   ├── loki-tnzzz-top.caddy      # Loki 日志（Token 认证）
-│   ├── zt-tnzzz-top.caddy        # ZeroTier 面板
-│   ├── ryuri-tnzzz-top.caddy     # Ryuri 服务
-│   ├── file-tnzzz-top.caddy      # 文件服务
-│   ├── img-tnzzz-top.caddy       # 图片 CDN
-│   ├── img-800008-best.caddy     # 图片 CDN
-│   ├── webhook-800008-best.caddy # Webhook
-│   ├── dmit-la-corona.caddy      # 静态探针
-│   ├── dmit-la-wee.caddy         # 静态探针
-│   └── data-tnzzz-top.caddy      # URL 重写代理（含 body rewrite）
-└── data-proxy-helper/
-    ├── main.go                   # 动态上游代理源码
-    └── data-proxy-helper         # 编译好的二进制
+## 仓库内容
 
-nginx-config/                     # 原始 Nginx 配置（从服务器拉取）
-├── nginx.conf
-├── conf.d/  (18 个站点 .conf)
-└── njs/proxy_rewrite.js
+运行时配置不纳入版本控制：`Caddyfile` 和 `sites/` 由部署环境或配置同步机制
+单独提供，并被 `.gitignore` 忽略。仓库仅保留可复现的 Caddy 构建源码和服务文件。
+
+```
+caddy/
+├── cmd/caddy/main.go             # 可复现的自定义 Caddy 构建入口
+├── dynamic_proxy/                # dynamic_proxy 模块源码与测试
+├── go.mod                        # Caddy 与扩展模块的精确依赖
+├── Makefile                      # make build / make test
+├── deploy.sh                     # 部署前校验并安装 systemd 服务
+├── service/                      # systemd 服务与同步监视脚本
+├── README.md                     # 本说明文件
+└── .gitignore                    # 忽略运行时配置和编译产物
 ```
 
 ## 架构
 
 ```
-Caddyfile (全局 + snippets)
+Caddyfile（部署环境提供，不纳入 Git）
   └── import sites/*.caddy
         ├── 静态站点:    直接 file_server
         ├── 反向代理:    直接 reverse_proxy
-        └── data.tnzzz.top:  Caddy → data-proxy-helper:9090 → 目标服务器
-                                                    ↑
-                                        解析路径提取目标 URL
+        └── data.tnzzz.top:  Caddy + dynamic_proxy → 目标服务器
+                                           ↑
+                              从请求路径提取目标 URL
 ```
 
 ## data.tnzzz.top 特殊处理
 
-该站点使用 NJS 脚本实现两个功能，Caddy 标准版不支持：
+该站点使用两个非标准 Caddy 模块实现 NJS 中的两个功能：
 
 | Nginx 功能 | Caddy 方案 |
 |---|---|
 | 响应体 URL 重写 (NJS body_filter) | ✅ `replace_response` 模块 (xcaddy 编译) |
-| 动态 upstream (proxy_pass 正则捕获) | ✅ `data-proxy-helper` (独立 Go 程序) |
+| 动态 upstream (proxy_pass 正则捕获) | ✅ 本仓库的 `dynamic_proxy` 模块 |
 
-### 启动方式
+### 构建自定义 Caddy
 
 ```bash
-# 1. 启动动态代理助手
-./data-proxy-helper -addr 127.0.0.1:9090 &
+# 下载依赖、执行模块测试并构建二进制
+make test
+make build
 
-# 2. 启动 Caddy
-./caddy run --config ./Caddyfile
+# 验证自定义模块已编入二进制
+./build/caddy list-modules | grep '^http.handlers.dynamic_proxy$'
+
+# 仅做外部 Caddyfile 的适配检查（不加载证书）
+make adapt CADDYFILE=/etc/caddy/Caddyfile
 ```
+
+`dynamic_proxy` 仅接受 `http` 和 `https` 目标；它将 `prefix` 后的绝对 URL
+作为上游地址。该能力本质上是动态代理，必须在站点层做好访问控制，不能把
+不可预测的用户输入直接暴露给不受信任的客户端。
 
 ### Body rewrite 策略
 
@@ -100,18 +91,17 @@ Caddyfile (全局 + snippets)
 ## 部署
 
 ```bash
-# 复制到 Caddy 目录
-cp Caddyfile /etc/caddy/Caddyfile
-cp -r sites/ /etc/caddy/sites/
-cp caddy /usr/local/bin/caddy
-cp data-proxy-helper/data-proxy-helper /usr/local/bin/
+# 在 CI 或构建主机上生成自定义 Caddy
+make test build
+
+# 将构建产物部署到 Caddy 目录
+cp build/caddy /etc/caddy/bin/caddy
+
+# Caddyfile 与 sites/ 由独立配置同步流程提供，不从本仓库复制
 
 # 创建日志目录
 mkdir -p /var/log/caddy
 
-# 启动 helper
-data-proxy-helper -addr 127.0.0.1:9090 &
-
-# 运行 Caddy
-caddy run --config /etc/caddy/Caddyfile
+# 安装并启动 systemd 服务（会验证 dynamic_proxy 模块存在）
+bash /etc/caddy/deploy.sh
 ```
