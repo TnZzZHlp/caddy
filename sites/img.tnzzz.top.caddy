@@ -1,0 +1,29 @@
+# 图片服务 - img.tnzzz.top
+# 类型: 静态图片 CDN + CORS
+img.tnzzz.top {
+	tls /etc/caddy/certs/tnzzz.top/fullchain.pem /etc/caddy/certs/tnzzz.top/key.pem
+
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods "GET, OPTIONS"
+		Access-Control-Allow-Headers "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range"
+		Access-Control-Expose-Headers "Content-Length,Content-Range"
+		Cache-Control "public, max-age=2592000, immutable"
+	}
+
+	import disallow_robots
+
+	handle_path /yuri/* {
+		root * /root/github/image/yuri
+		file_server
+		header {
+			Cache-Control "public, max-age=2592000, immutable"
+			Access-Control-Allow-Origin *
+		}
+	}
+
+	handle {
+		root * /www/img.tnzzz.top
+		file_server
+	}
+}

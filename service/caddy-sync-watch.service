@@ -1,0 +1,14 @@
+[Unit]
+Description=Watch /etc/caddy changes via Syncthing and reload Caddy
+After=network.target caddy.service
+BindsTo=caddy.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/etc/caddy/service/caddy-sync-watch.sh
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

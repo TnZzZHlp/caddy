@@ -1,0 +1,40 @@
+# API 网关 - api.tnzzz.top
+# 类型: 多后端 API 聚合 + 订阅文件服务
+api.tnzzz.top {
+	tls /etc/caddy/certs/tnzzz.top/fullchain.pem /etc/caddy/certs/tnzzz.top/key.pem
+
+	import security_headers
+	import cors
+
+	# 订阅文件服务（64 位 hex 路径，匹配优先）
+	@subscription {
+		path_regexp ^/[A-Za-z0-9]{64}$
+	}
+	handle @subscription {
+		root * /root/github/api/subscriptions
+		file_server
+		header Cache-Control "no-cache"
+	}
+
+	route /robot.txt {
+		respond "User-agent: *\nDisallow: /" 200
+	}
+
+	handle /yuri/* {
+		reverse_proxy 127.0.0.1:8081
+	}
+	handle /ai/* {
+		reverse_proxy 127.0.0.1:8081
+	}
+	handle /temp/* {
+		reverse_proxy 127.0.0.1:8081
+	}
+	handle /ocr {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	handle {
+		root * /www/api.tnzzz.top
+		file_server
+	}
+}

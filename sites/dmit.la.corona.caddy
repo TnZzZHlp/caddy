@@ -1,0 +1,13 @@
+# DMIT LA Corona 探针 - dmit-la-corona.tnzzz.top
+# 类型: 静态站点
+dmit-la-corona.tnzzz.top {
+	tls /etc/caddy/certs/tnzzz.top/fullchain.pem /etc/caddy/certs/tnzzz.top/key.pem
+
+	import security_headers
+	import disallow_robots
+
+	root * /www/dmit-la-corona.tnzzz.top
+	file_server {
+		index index.html
+	}
+}

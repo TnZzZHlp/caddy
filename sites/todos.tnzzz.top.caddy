@@ -1,0 +1,27 @@
+# Todos 待办事项 - todos.tnzzz.top
+# 类型: SPA + API 反向代理
+todos.tnzzz.top {
+	tls /etc/caddy/certs/tnzzz.top/fullchain.pem /etc/caddy/certs/tnzzz.top/key.pem
+
+	import security_headers
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:30004
+		header >Access-Control-Allow-Origin
+		header >Access-Control-Allow-Methods
+		header >Access-Control-Allow-Headers
+	}
+
+	handle {
+		root * /www/todos.tnzzz.top
+		file_server
+	}
+
+	handle_errors {
+		@404 {
+			expression {http.error.status_code} == 404
+		}
+		rewrite @404 /index.html
+		file_server
+	}
+}

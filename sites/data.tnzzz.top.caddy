@@ -1,0 +1,43 @@
+# URL 重写代理 - data.tnzzz.top
+# 代理路径: /a2afc2af6374bcb382a68f2d91b36b9a/<target_url>
+# 其余路径: 静态文件 /www/data.tnzzz.top
+data.tnzzz.top {
+	tls /etc/caddy/certs/tnzzz.top/fullchain.pem /etc/caddy/certs/tnzzz.top/key.pem
+
+	import security_headers
+	import disallow_robots
+
+	# 代理路径
+	handle /a2afc2af6374bcb382a68f2d91b36b9a/* {
+		# 移除上游缓存头
+		header >Cache-Control
+		header >Expires
+		header >ETag
+		header >Last-Modified
+		header >Age
+		header >Pragma
+		header >Vary
+
+		# 响应体 URL 重写
+		replace {
+			"https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/https://data.tnzzz.top/" "https://data.tnzzz.top/"
+			"https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/http://data.tnzzz.top/" "http://data.tnzzz.top/"
+		}
+		replace re "(https?://[a-zA-Z0-9][-a-zA-Z0-9.]*\\.[a-zA-Z]{2,}[^\\s\"'<>]*)" "https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/$1"
+		replace {
+			"https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/https://data.tnzzz.top/" "https://data.tnzzz.top/"
+			"https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/http://data.tnzzz.top/" "http://data.tnzzz.top/"
+			"https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/" "https://data.tnzzz.top/a2afc2af6374bcb382a68f2d91b36b9a/"
+		}
+
+		dynamic_proxy {
+			prefix /a2afc2af6374bcb382a68f2d91b36b9a/
+		}
+	}
+
+	# 静态文件
+	handle {
+		root * /www/data.tnzzz.top
+		file_server
+	}
+}

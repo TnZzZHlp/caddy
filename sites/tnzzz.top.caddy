@@ -1,0 +1,32 @@
+# 主站 - tnzzz.top / www.tnzzz.top
+# 类型: 静态站点
+tnzzz.top, www.tnzzz.top {
+	tls /etc/caddy/certs/tnzzz.top/fullchain.pem /etc/caddy/certs/tnzzz.top/key.pem
+
+	import security_headers
+
+	root * /www/tnzzz.top
+	file_server {
+		index index.html
+	}
+
+	handle_errors {
+		@404 {
+			expression {http.error.status_code} == 404
+		}
+		rewrite @404 /404.html
+		file_server
+	}
+
+	# 静态资源缓存 30d
+	@static {
+		path_regexp \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$
+	}
+	header @static Cache-Control "public, max-age=2592000, immutable"
+
+	# HTML 不缓存
+	@html {
+		path_regexp \.html$
+	}
+	header @html Cache-Control "no-store, no-cache, must-revalidate"
+}

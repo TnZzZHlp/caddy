@@ -1,0 +1,10 @@
+# Webhook 服务 - webhook.800008.best
+# 类型: 内网服务反向代理
+webhook.800008.best {
+	tls /etc/caddy/certs/800008.best/fullchain.pem /etc/caddy/certs/800008.best/key.pem
+
+	import security_headers_strict
+	import disallow_robots
+
+	reverse_proxy 192.168.255.141:63000
+}

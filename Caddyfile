@@ -1,0 +1,103 @@
+# =============================================================================
+# Caddyfile - 主配置文件（全局选项 + 代码片段 + 站点导入）
+# 源: 192.168.255.201 /etc/nginx  →  Caddy v2
+# 转换: 2026-05-21
+#
+# 站点配置拆分在 sites/ 目录下，按域名分文件
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# 全局选项
+# ---------------------------------------------------------------------------
+{
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 100MiB
+			roll_keep 5
+			roll_keep_for 720h
+		}
+		format json
+	}
+
+	servers {
+		max_header_size 8KiB
+	}
+
+	admin :2019
+
+	order dynamic_proxy before reverse_proxy
+}
+
+# ---------------------------------------------------------------------------
+# 全局代码片段（各站点通过 import 引用）
+# ---------------------------------------------------------------------------
+
+(security_headers) {
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		X-XSS-Protection "1; mode=block"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+}
+
+(security_headers_strict) {
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+}
+
+(cors) {
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+	}
+	@options {
+		method OPTIONS
+	}
+	respond @options 204
+}
+
+(cors_stream) {
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods "GET, POST, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization"
+	}
+	@options {
+		method OPTIONS
+	}
+	respond @options 204
+}
+
+(proxy_stream) {
+	reverse_proxy {
+		flush_interval -1
+		transport http {
+			read_timeout 600s
+			write_timeout 600s
+		}
+	}
+}
+
+(disallow_robots) {
+	route /robot.txt {
+		respond "User-agent: *\nDisallow: /" 200
+	}
+}
+
+(static_cache) {
+	header Cache-Control "public, max-age=2592000, immutable"
+}
+
+(html_no_cache) {
+	header Cache-Control "no-store, no-cache, must-revalidate"
+}
+
+# ---------------------------------------------------------------------------
+# 导入各站点配置（按域名拆分）
+# ---------------------------------------------------------------------------
+import sites/*.caddy
