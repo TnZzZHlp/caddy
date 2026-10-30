@@ -6,7 +6,7 @@ artifacts.
 
 ## Included modules
 
-- Caddy v2.11.4 standard modules
+- Caddy v2.11.7 standard modules
 - `github.com/TnZzZHlp/caddy/dynamic_proxy` (local source)
 - `github.com/caddyserver/replace-response`
 - `github.com/mholt/caddy-webdav`
